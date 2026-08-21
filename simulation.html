@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Torque Generator - Magnetic Effect of Electric Current</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07101d;color:#eef5ff;font-family:Arial,sans-serif}
+.app{max-width:1250px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;gap:15px;align-items:center}
+h1{margin:0;font-size:29px}.sub{color:#9fb1ca;margin:5px 0 16px}.badge{padding:8px 12px;border-radius:20px;background:#24334d;font-weight:bold}
+.grid{display:grid;grid-template-columns:1fr 330px;gap:16px}.card{background:#111c2d;border:1px solid #2b3c58;border-radius:16px;padding:15px}
+canvas{width:100%;height:auto;background:#080e18;border-radius:12px}
+button{border:0;border-radius:11px;padding:13px 12px;color:white;background:#1976d2;font-weight:bold;cursor:pointer}
+button.off{background:#26344b}.buttons{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.controls{display:grid;gap:12px}label{display:flex;justify-content:space-between;font-weight:bold}
+input{width:100%}.v{color:#67ddff}.formula{font-size:21px;text-align:center;padding:13px;background:#0a1321;border-radius:10px}
+.metrics{display:grid;grid-template-columns:1fr 1fr;gap:9px}.m{background:#0a1321;padding:10px;border-radius:10px}.m small{color:#8fa3c0;display:block}.m b{font-size:19px}
+.status{padding:11px;border-radius:10px;text-align:center;font-weight:bold;background:#28364d}.on{background:#154e38}.danger{background:#5b2630}
+.note{font-size:13px;color:#aebed5;line-height:1.45}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.top{display:block}.badge{display:inline-block;margin-top:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div><h1>Magnetic Effect of Electric Current</h1><div class="sub">Interactive working simulation — Torque on a current-carrying coil</div></div><div id="badge" class="badge">CURRENT OFF</div></div>
+
+<div class="grid">
+<div class="card">
+<canvas id="c" width="900" height="560"></canvas>
+<div class="note">Press <b>START CURRENT</b>. When current flows through the coil inside the magnetic field, forces act on opposite sides and produce torque. Change the current, field, turns, area or angle to see the effect.</div>
+</div>
+
+<div class="card controls">
+<div class="buttons">
+<button id="power">⚡ START CURRENT</button>
+<button id="reverse" class="off">↔ REVERSE</button>
+<button id="pause" class="off">⏸ PAUSE ROTATION</button>
+<button id="reset" class="off">↺ RESET</button>
+</div>
+
+<div id="status" class="status">Circuit OFF — Torque = 0</div>
+
+<div><label>Current I <span class="v" id="iv">2.0 A</span></label><input id="I" type="range" min="0" max="5" step=".1" value="2"></div>
+<div><label>Magnetic field B <span class="v" id="bv">0.80 T</span></label><input id="B" type="range" min="0" max="1.5" step=".01" value=".8"></div>
+<div><label>Turns N <span class="v" id="nv">20</span></label><input id="N" type="range" min="1" max="50" value="20"></div>
+<div><label>Area A <span class="v" id="av">0.020 m²</span></label><input id="A" type="range" min=".005" max=".05" step=".001" value=".02"></div>
+<div><label>Angle θ <span class="v" id="thv">60°</span></label><input id="TH" type="range" min="0" max="180" value="60"></div>
+
+<div class="formula">τ = N I A B sin θ</div>
+<div class="metrics">
+<div class="m"><small>Torque τ</small><b id="tau">0.277 N·m</b></div>
+<div class="m"><small>Direction</small><b id="dir">—</b></div>
+<div class="m"><small>Current</small><b id="ci">0 A</b></div>
+<div class="m"><small>Magnetic Force</small><b id="force">0 N*</b></div>
+</div>
+<div class="note">*Force display is a scaled visualization because actual force depends on the effective conductor length. The torque equation shown is the main experiment.</div>
+</div>
+</div>
+</div>
+
+<script>
+const c=document.getElementById("c"),x=c.getContext("2d");
+const I=document.getElementById("I"),B=document.getElementById("B"),N=document.getElementById("N"),A=document.getElementById("A"),TH=document.getElementById("TH");
+let on=false,rev=false,paused=false,rot=0,last=performance.now();
+
+function vals(){return{I:+I.value,B:+B.value,N:+N.value,A:+A.value,t:+TH.value}}
+function torque(){let q=vals();return on?q.N*q.I*q.A*q.B*Math.sin(q.t*Math.PI/180):0}
+function update(){
+ let q=vals(),t=torque();
+ document.getElementById("iv").textContent=q.I.toFixed(1)+" A";
+ document.getElementById("bv").textContent=q.B.toFixed(2)+" T";
+ document.getElementById("nv").textContent=q.N;
+ document.getElementById("av").textContent=q.A.toFixed(3)+" m²";
+ document.getElementById("thv").textContent=q.t+"°";
+ document.getElementById("tau").textContent=t.toFixed(3)+" N·m";
+ document.getElementById("ci").textContent=(on?q.I:0).toFixed(1)+" A";
+ document.getElementById("force").textContent=(t*1.8).toFixed(2)+" N*";
+ document.getElementById("dir").textContent=on?(rev?"↺ Reverse":"↻ Forward"):"—";
+ document.getElementById("status").textContent=on?"CURRENT ON — TORQUE GENERATED!":"Circuit OFF — Torque = 0";
+ document.getElementById("status").className="status "+(on?"on":"");
+ document.getElementById("badge").textContent=on?"CURRENT ON":"CURRENT OFF";
+ document.getElementById("badge").style.background=on?"#154e38":"#24334d";
+ document.getElementById("power").textContent=on?"⏹ STOP CURRENT":"⚡ START CURRENT";
+}
+[I,B,N,A,TH].forEach(e=>e.oninput=update);
+document.getElementById("power").onclick=()=>{on=!on;if(!on)paused=false;update()};
+document.getElementById("reverse").onclick=()=>{rev=!rev;update()};
+document.getElementById("pause").onclick=()=>{paused=!paused;document.getElementById("pause").textContent=paused?"▶ RESUME ROTATION":"⏸ PAUSE ROTATION"};
+document.getElementById("reset").onclick=()=>{on=false;rev=false;paused=false;rot=0;I.value=2;B.value=.8;N.value=20;A.value=.02;TH.value=60;document.getElementById("pause").textContent="⏸ PAUSE ROTATION";update()};
+
+function arrow(x1,y1,x2,y2,col,w=3){
+ let a=Math.atan2(y2-y1,x2-x1),l=12;x.strokeStyle=col;x.fillStyle=col;x.lineWidth=w;
+ x.beginPath();x.moveTo(x1,y1);x.lineTo(x2,y2);x.stroke();
+ x.beginPath();x.moveTo(x2,y2);x.lineTo(x2-l*Math.cos(a-.5),y2-l*Math.sin(a-.5));x.lineTo(x2-l*Math.cos(a+.5),y2-l*Math.sin(a+.5));x.closePath();x.fill()
+}
+function draw(t){
+ let dt=Math.min(.04,(t-last)/1000);last=t;
+ if(on&&!paused){let z=torque();rot+=(rev?-1:1)*z*2.2*dt}
+ x.clearRect(0,0,c.width,c.height);
+ // grid
+ x.strokeStyle="#101d30";x.lineWidth=1;
+ for(let a=0;a<c.width;a+=40){x.beginPath();x.moveTo(a,0);x.lineTo(a,c.height);x.stroke()}
+ for(let a=0;a<c.height;a+=40){x.beginPath();x.moveTo(0,a);x.lineTo(c.width,a);x.stroke()}
+ // magnets
+ x.fillStyle="#612d35";x.fillRect(30,110,135,330);x.fillStyle="#294477";x.fillRect(735,110,135,330);
+ x.fillStyle="white";x.font="bold 55px Arial";x.textAlign="center";x.fillText("N",98,295);x.fillText("S",802,295);
+ // field
+ for(let y=155;y<=405;y+=42)arrow(180,y,720,y,"#ff6868",2);
+ x.font="bold 16px Arial";x.fillStyle="#ff9292";x.fillText("B → MAGNETIC FIELD",450,88);
+ // axle
+ x.strokeStyle="#d5e2f5";x.lineWidth=8;x.beginPath();x.moveTo(270,280);x.lineTo(630,280);x.stroke();
+ // coil
+ let q=vals(),scale=Math.max(.18,Math.abs(Math.cos(rot)));
+ let w=235,h=145*scale,cx=450,cy=280;
+ x.save();x.translate(cx,cy);x.rotate(rot);
+ x.strokeStyle="#65e6ff";x.lineWidth=6;x.strokeRect(-w/2,-h/2,w,h);
+ // turns
+ x.globalAlpha=.3;
+ for(let k=-8;k<=8;k++){x.beginPath();x.moveTo(-w/2+k*3,-h/2);x.lineTo(w/2+k*3,-h/2);x.stroke()}
+ x.globalAlpha=1;
+ if(on&&q.I>0){
+   arrow(-75,-h/2,15,-h/2,"#5ee7ff",4);arrow(75,h/2,-15,h/2,"#5ee7ff",4);
+   arrow(-w/2,-25,-w/2,45,"#ffd45e",5);arrow(w/2,25,w/2,-45,"#ffd45e",5);
+ }
+ x.restore();
+ // center pivot
+ x.fillStyle="#dce9ff";x.beginPath();x.arc(cx,cy,10,0,Math.PI*2);x.fill();
+ // torque arrow
+ if(on&&torque()>0){
+   x.strokeStyle="#c78cff";x.lineWidth=6;x.beginPath();x.arc(cx,cy,95,0.4,4.7,rev);x.stroke();
+   arrow(rev?cx+78:cx-78,cy+55,rev?cx+65:cx-65,cy+88,"#c78cff",5);
+ }
+ // labels
+ x.font="bold 17px Arial";x.textAlign="center";x.fillStyle="#65e6ff";x.fillText(on?"CURRENT FLOWS":"CURRENT OFF",450,505);
+ x.fillStyle="#ffd45e";x.fillText("F",290,185);x.fillText("F",610,185);
+ x.fillStyle="#c78cff";x.fillText(on?"TORQUE τ GENERATED":"TORQUE = 0",450,535);
+ requestAnimationFrame(draw)
+}
+update();requestAnimationFrame(draw);
+</script>
+</body>
+</html>
